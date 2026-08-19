@@ -1,4 +1,5 @@
-const PYTHON_AI_SERVICE_URL = process.env.PYTHON_AI_SERVICE_URL || 'http://127.0.0.1:8000';
+const PYTHON_AI_SERVICE_URL =
+    process.env.PYTHON_AI_SERVICE_URL || 'http://edupilot-ai:8000';
 const INTERNAL_AI_SERVICE_TOKEN = process.env.INTERNAL_AI_SERVICE_TOKEN || 'educopilot_internal_ai_secret_token_2026';
 
 /**
