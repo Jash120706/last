@@ -2,9 +2,9 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const mongoose = require('mongoose');
+const path = require('path');
 const connectDB = require('./config/db');
 
-// Load environment variables
 dotenv.config();
 
 const app = express();
@@ -28,7 +28,6 @@ app.use(express.urlencoded({
 
 app.use((req, res, next) => {
 
-  // Allow health checks even if MongoDB is unavailable
   if (
     req.path === '/' ||
     req.path === '/health' ||
@@ -37,10 +36,9 @@ app.use((req, res, next) => {
     return next();
   }
 
-  // MongoDB readyState === 1 means connected
   if (mongoose.connection.readyState !== 1) {
     return res.status(503).json({
-      error: 'Database is currently unavailable. Please ensure MongoDB is running.'
+      error: 'Database is currently unavailable.'
     });
   }
 
@@ -65,12 +63,12 @@ app.get('/', (req, res) => {
   res.json({
     status: 'ok',
     service: 'EduCopilot Backend API',
-    message: 'Server is running successfully'
+    message: 'EduCopilot is running successfully'
   });
 });
 
 // =====================================================
-// BASIC HEALTH CHECK
+// HEALTH CHECK
 // =====================================================
 
 app.get('/health', (req, res) => {
@@ -79,10 +77,6 @@ app.get('/health', (req, res) => {
     service: 'EduCopilot Backend API'
   });
 });
-
-// =====================================================
-// API HEALTH CHECK
-// =====================================================
 
 app.get('/api/health', (req, res) => {
 
@@ -95,15 +89,48 @@ app.get('/api/health', (req, res) => {
     status: 'ok',
     database: dbStatus,
     service: 'EduCopilot Backend API',
-
     llmProvider: process.env.GROQ_API_KEY
       ? 'Groq API'
       : 'Fallback Engine (Active)',
-
     model: process.env.GROQ_MODEL || 'groq/compound-mini',
-
     timestamp: new Date().toISOString()
   });
+});
+
+// =====================================================
+// SERVE REACT FRONTEND
+// =====================================================
+
+const clientPath = path.join(
+  __dirname,
+  '..',
+  'client',
+  'dist'
+);
+
+console.log('React client path:', clientPath);
+
+app.use(express.static(clientPath));
+
+// =====================================================
+// REACT SPA FALLBACK
+// =====================================================
+
+app.use((req, res, next) => {
+
+  // Don't handle API routes here
+  if (req.path.startsWith('/api')) {
+    return next();
+  }
+
+  res.sendFile(
+    path.join(clientPath, 'index.html'),
+    (err) => {
+      if (err) {
+        next(err);
+      }
+    }
+  );
 });
 
 // =====================================================
@@ -140,7 +167,6 @@ app.use((err, req, res, next) => {
 // =====================================================
 
 const PORT = process.env.PORT || 5000;
-
 const HOST = process.env.HOST || '0.0.0.0';
 
 // =====================================================
@@ -155,27 +181,25 @@ const startServer = async () => {
     console.log('Starting EduCopilot Backend...');
     console.log('=========================================');
 
-    // Connect to MongoDB first
     await connectDB();
 
     console.log('MongoDB connection established.');
 
-    // Listen on all network interfaces
     app.listen(PORT, HOST, () => {
 
       console.log('=========================================');
       console.log(
-        `🚀 EduCopilot API Server running on ${HOST}:${PORT}`
+        `🚀 EduCopilot Server running on ${HOST}:${PORT}`
       );
+
       console.log(
-        `🔗 Root: http://localhost:${PORT}/`
+        `🌐 Application: http://localhost:${PORT}/`
       );
-      console.log(
-        `🔗 Health: http://localhost:${PORT}/health`
-      );
+
       console.log(
         `🔗 API Health: http://localhost:${PORT}/api/health`
       );
+
       console.log('=========================================');
 
     });
@@ -183,7 +207,7 @@ const startServer = async () => {
   } catch (error) {
 
     console.error(
-      '❌ Failed to start EduCopilot Backend:',
+      '❌ Failed to start server:',
       error.message
     );
 
@@ -191,5 +215,4 @@ const startServer = async () => {
   }
 };
 
-// Start application
 startServer();
